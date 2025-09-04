@@ -1,4 +1,4 @@
-# Corporate Travel Portal
+# Corporate Travel Portal v0.0
 
 A proof of concept for a corporate travel subscription platform web portal with an elite design aesthetic.
 
@@ -59,6 +59,10 @@ To build for production:
 ```bash
 npm run build
 ```
+
+## Version
+
+This is version 0.0 of the Corporate Travel Portal, representing the initial proof of concept with core functionality implemented.
 
 ## License
 
