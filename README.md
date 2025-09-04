@@ -33,10 +33,19 @@ All financial values are displayed in Indian Rupees (₹).
 This application is automatically deployed to GitHub Pages using GitHub Actions.
 
 To set up GitHub Pages:
-1. Go to repository settings
+1. Go to repository settings: https://github.com/hemantdoc12/corporate-travel-portal/settings
 2. Navigate to the "Pages" section
-3. Select "GitHub Actions" as the source
+3. Under "Source", select "GitHub Actions"
 4. The site will be available at: https://hemantdoc12.github.io/corporate-travel-portal/
+
+## Troubleshooting
+
+If you see an error like "Failed to load resource: the server responded with a status of 404", try these steps:
+
+1. Make sure GitHub Pages is configured to deploy from GitHub Actions (not the root or /docs folder)
+2. Check that the GitHub Actions workflow is running successfully: https://github.com/hemantdoc12/corporate-travel-portal/actions
+3. Clear your browser cache
+4. Try accessing the site in an incognito/private window
 
 ## Development
 
