@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
+import inventoryService from './services/inventoryService';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -46,6 +47,12 @@ function App() {
             >
               Subscriptions
             </button>
+            <button 
+              className={`nav-button ${activeTab === 'inventory' ? 'active' : ''}`} 
+              onClick={() => setActiveTab('inventory')}
+            >
+              Inventory
+            </button>
           </nav>
         </div>
       </header>
@@ -57,6 +64,7 @@ function App() {
           {activeTab === 'policies' && <Policies />}
           {activeTab === 'reports' && <Reports />}
           {activeTab === 'subscriptions' && <Subscriptions />}
+          {activeTab === 'inventory' && <InventoryManagement />}
         </div>
       </main>
     </div>
@@ -530,6 +538,201 @@ function Subscriptions() {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function InventoryManagement() {
+  const [inventorySources, setInventorySources] = useState([
+    { id: 1, name: 'Real-time API', status: 'connected', lastSync: '5 minutes ago', itemCount: 12450, type: 'realtime' },
+    { id: 2, name: 'Blocked Inventory 1 (Contract ABC)', status: 'connected', lastSync: '2 hours ago', itemCount: 8750, type: 'blocked', contractExpiry: '15 Dec 2025' },
+    { id: 3, name: 'Blocked Inventory 2 (Agreement XYZ)', status: 'connected', lastSync: '4 hours ago', itemCount: 5200, type: 'blocked', contractExpiry: '30 Nov 2025' }
+  ]);
+
+  const [selectedSources, setSelectedSources] = useState(['all']);
+  const [inventoryItems, setInventoryItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch inventory data on component mount
+  useEffect(() => {
+    fetchInventoryData();
+  }, []);
+
+  const fetchInventoryData = async () => {
+    setLoading(true);
+    try {
+      const allInventory = await inventoryService.fetchAllInventory();
+      const normalizedInventory = inventoryService.normalizeInventory(allInventory);
+      
+      // Group inventory by route for display
+      const groupedInventory = groupInventoryByRoute(normalizedInventory);
+      setInventoryItems(groupedInventory);
+    } catch (error) {
+      console.error('Error fetching inventory data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const groupInventoryByRoute = (inventory) => {
+    const grouped = {};
+    
+    inventory.forEach(item => {
+      const routeKey = `${item.item.origin} → ${item.item.destination}`;
+      const date = new Date(item.item.departureTime).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+      
+      if (!grouped[routeKey]) {
+        grouped[routeKey] = {
+          route: routeKey,
+          date: date,
+          options: []
+        };
+      }
+      
+      grouped[routeKey].options.push({
+        id: item.id,
+        source: item.source,
+        price: `₹${item.pricing.totalPrice.toLocaleString()}`,
+        airline: item.metadata.airline,
+        class: item.metadata.class,
+        time: `${new Date(item.item.departureTime).toLocaleTimeString('en-IN', {hour: '2-digit', minute:'2-digit'})}-${new Date(item.item.arrivalTime).toLocaleTimeString('en-IN', {hour: '2-digit', minute:'2-digit'})}`,
+        rating: item.metadata.rating || 0,
+        type: item.type
+      });
+    });
+    
+    return Object.values(grouped);
+  };
+
+  const toggleSource = (sourceType) => {
+    if (sourceType === 'all') {
+      setSelectedSources(['all']);
+    } else {
+      const newSources = selectedSources.includes(sourceType)
+        ? selectedSources.filter(s => s !== sourceType && s !== 'all')
+        : [...selectedSources.filter(s => s !== 'all'), sourceType];
+      
+      // If all sources are selected, set to 'all'
+      if (newSources.length === 3) {
+        setSelectedSources(['all']);
+      } else {
+        setSelectedSources(newSources);
+      }
+    }
+  };
+
+  const getConnectionStatus = (status) => {
+    return status === 'connected' ? '● Connected' : '● Disconnected';
+  };
+
+  const getConnectionStatusClass = (status) => {
+    return status === 'connected' ? 'status-connected' : 'status-disconnected';
+  };
+
+  return (
+    <div className="inventory-management">
+      <div className="section-header">
+        <h2 className="text-heading-lg">Inventory Management</h2>
+        <p className="text-body-md text-secondary">Unified view of all inventory sources</p>
+      </div>
+      
+      <div className="inventory-actions">
+        <button className="btn btn-accent">Add New Inventory</button>
+        <button className="btn btn-secondary" onClick={fetchInventoryData}>Refresh All</button>
+        <button className="btn btn-secondary">Export Report</button>
+      </div>
+      
+      <div className="source-filters">
+        <span className="text-body-md">Source Filter:</span>
+        <button 
+          className={`filter-button ${selectedSources.includes('all') ? 'active' : ''}`}
+          onClick={() => toggleSource('all')}
+        >
+          All
+        </button>
+        <button 
+          className={`filter-button ${selectedSources.includes('realtime') ? 'active' : ''}`}
+          onClick={() => toggleSource('realtime')}
+        >
+          Real-time
+        </button>
+        <button 
+          className={`filter-button ${selectedSources.includes('blocked') ? 'active' : ''}`}
+          onClick={() => toggleSource('blocked')}
+        >
+          Blocked
+        </button>
+      </div>
+      
+      <div className="inventory-sources">
+        {inventorySources.map(source => (
+          <div key={source.id} className="source-card card">
+            <div className="source-header">
+              <h3 className="text-heading-md">{source.name}</h3>
+              <span className={`status-indicator ${getConnectionStatusClass(source.status)}`}>
+                {getConnectionStatus(source.status)}
+              </span>
+            </div>
+            <div className="source-details">
+              <p className="text-body-md">Last Sync: {source.lastSync}</p>
+              <p className="text-body-md">Items: {source.itemCount.toLocaleString()}</p>
+              {source.contractExpiry && (
+                <p className="text-body-md">Contract Expires: {source.contractExpiry}</p>
+              )}
+            </div>
+            <div className="source-actions">
+              <button className="btn btn-secondary btn-small">Configure</button>
+              <button className="btn btn-secondary btn-small">Test Connection</button>
+              {source.contractExpiry && (
+                <button className="btn btn-secondary btn-small">View Contract</button>
+              )}
+              <button className="btn btn-secondary btn-small">Force Sync</button>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      <div className="inventory-results">
+        <h3 className="text-heading-md">Inventory Search Results</h3>
+        {loading ? (
+          <div className="loading">Loading inventory data...</div>
+        ) : inventoryItems.length > 0 ? (
+          inventoryItems.map(item => (
+            <div key={`${item.route}-${item.date}`} className="inventory-item card">
+              <div className="item-header">
+                <h4 className="text-heading-sm">{item.route}</h4>
+                <p className="text-body-md text-secondary">{item.date}</p>
+              </div>
+              <div className="item-options">
+                {item.options.map(option => (
+                  <div key={option.id} className="option-card">
+                    <div className="option-header">
+                      <span className="source-tag">{option.source}</span>
+                      <span className="price-tag">{option.price}</span>
+                    </div>
+                    <div className="option-details">
+                      <p className="text-body-md">{option.airline}</p>
+                      <p className="text-body-sm text-secondary">{option.class}</p>
+                      <p className="text-body-sm text-secondary">{option.time}</p>
+                      <div className="rating">
+                        {'★'.repeat(option.rating)}
+                        {'☆'.repeat(5 - option.rating)}
+                      </div>
+                    </div>
+                    <button className="btn btn-accent btn-small">Select</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="no-results">No inventory data available. Click "Refresh All" to fetch data.</div>
+        )}
       </div>
     </div>
   );

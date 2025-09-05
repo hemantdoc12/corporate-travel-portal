@@ -9,6 +9,7 @@ A proof of concept for a corporate travel subscription platform web portal with 
 - Corporate travel policy management
 - Subscription plan management
 - Comprehensive reporting and analytics
+- Unified inventory management system (Demo)
 
 ## Technology Stack
 
@@ -27,6 +28,21 @@ The portal features an elite design with:
 - Refined spacing and hierarchy
 
 All financial values are displayed in Indian Rupees (₹).
+
+## Demo
+
+This repository includes a demo of the unified inventory management system that showcases how the portal would integrate with three different inventory APIs:
+1. Real-time inventory API
+2. Blocked inventory API 1 (contracted)
+3. Blocked inventory API 2 (pre-negotiated)
+
+To run the demo locally:
+```bash
+npm install
+npm run dev
+```
+
+Then open your browser to http://localhost:5173/corporate-travel-portal/ and navigate to the "Inventory" section.
 
 ## Deployment
 
