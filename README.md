@@ -10,6 +10,7 @@ A proof of concept for a corporate travel subscription platform web portal with 
 - Subscription plan management
 - Comprehensive reporting and analytics
 - Unified inventory management system (Demo)
+- End-to-end booking flow with payment simulation
 
 ## Technology Stack
 
@@ -28,6 +29,29 @@ The portal features an elite design with:
 - Refined spacing and hierarchy
 
 All financial values are displayed in Indian Rupees (₹).
+
+## End-to-End User Experience
+
+This demo simulates a complete user journey from login to booking confirmation:
+
+1. **Login**: Users can log in with sample credentials
+2. **Dashboard**: Personalized view with travel analytics
+3. **Booking Flow**: 
+   - Search for travel options
+   - Select from unified inventory (real-time and blocked sources)
+   - Enter passenger details
+   - Complete payment process
+   - Receive booking confirmation
+4. **Inventory Management**: View and manage inventory sources
+5. **Logout**: Secure session termination
+
+### Test Credentials
+- Email: `admin@company.com`
+- Password: `password123`
+
+You can also use:
+- `travel@company.com` / `password123`
+- `executive@company.com` / `password123`
 
 ## Demo
 

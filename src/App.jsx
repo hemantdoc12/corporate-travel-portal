@@ -1,9 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import Login from './Login';
 import inventoryService from './services/inventoryService';
 
 function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [user, setUser] = useState(null);
+
+  // Check if user is already logged in (from localStorage)
+  useEffect(() => {
+    const savedUser = localStorage.getItem('travelUser');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+      setIsLoggedIn(true);
+    }
+  }, []);
+
+  const handleLogin = (userData) => {
+    setUser(userData);
+    setIsLoggedIn(true);
+    localStorage.setItem('travelUser', JSON.stringify(userData));
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setIsLoggedIn(false);
+    setActiveTab('dashboard');
+    localStorage.removeItem('travelUser');
+  };
+
+  if (!isLoggedIn) {
+    return <Login onLogin={handleLogin} />;
+  }
 
   return (
     <div className="App">
@@ -54,13 +83,18 @@ function App() {
               Inventory
             </button>
           </nav>
+          <div className="user-actions">
+            <button className="logout-button" onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 
       <main className="app-main">
         <div className="container">
-          {activeTab === 'dashboard' && <Dashboard />}
-          {activeTab === 'bookings' && <Bookings />}
+          {activeTab === 'dashboard' && <Dashboard user={user} />}
+          {activeTab === 'bookings' && <Bookings user={user} />}
           {activeTab === 'policies' && <Policies />}
           {activeTab === 'reports' && <Reports />}
           {activeTab === 'subscriptions' && <Subscriptions />}
@@ -71,12 +105,12 @@ function App() {
   );
 }
 
-function Dashboard() {
+function Dashboard({ user }) {
   return (
     <div className="dashboard">
       <div className="section-header">
         <h2 className="text-heading-lg">Executive Dashboard</h2>
-        <p className="text-body-md text-secondary">Your comprehensive view of corporate travel operations</p>
+        <p className="text-body-md text-secondary">Welcome back, {user?.name || 'Travel Manager'}</p>
       </div>
       
       <div className="dashboard-stats">
@@ -176,7 +210,441 @@ function Dashboard() {
   );
 }
 
-function Bookings() {
+function Bookings({ user }) {
+  const [bookingStep, setBookingStep] = useState(1); // 1: Search, 2: Select, 3: Passenger, 4: Payment, 5: Confirmation
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [passengerDetails, setPassengerDetails] = useState({
+    firstName: '',
+    lastName: '',
+    email: user?.email || '',
+    phone: '',
+    passport: ''
+  });
+  const [paymentMethod, setPaymentMethod] = useState('credit');
+  const [searchResults, setSearchResults] = useState([]);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    // Simulate search results
+    const results = [
+      {
+        id: 1,
+        route: 'Delhi → Mumbai',
+        date: '10 Sep 2025',
+        options: [
+          { id: 1, source: 'Real-time', price: '₹45,000', airline: 'Air India', class: 'First Class', time: '08:00-11:30', rating: 5, type: 'realtime' },
+          { id: 2, source: 'Blocked 1', price: '₹42,000', airline: 'Vistara', class: 'Business', time: '09:00-12:30', rating: 4, type: 'blocked' },
+          { id: 3, source: 'Blocked 2', price: '₹48,000', airline: 'IndiGo', class: 'Business', time: '14:00-17:30', rating: 4, type: 'blocked' }
+        ]
+      },
+      {
+        id: 2,
+        route: 'Mumbai → Bangalore',
+        date: '12 Sep 2025',
+        options: [
+          { id: 4, source: 'Real-time', price: '₹8,500', airline: 'IndiGo', class: 'Economy', time: '16:00-17:30', rating: 4, type: 'realtime' },
+          { id: 5, source: 'Blocked 1', price: '₹7,800', airline: 'SpiceJet', class: 'Economy', time: '18:00-19:30', rating: 3, type: 'blocked' }
+        ]
+      }
+    ];
+    setSearchResults(results);
+    setBookingStep(2);
+  };
+
+  const handleSelectOption = (option) => {
+    setSelectedOption(option);
+    setBookingStep(3);
+  };
+
+  const handlePassengerChange = (e) => {
+    const { name, value } = e.target;
+    setPassengerDetails(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleContinueToPayment = (e) => {
+    e.preventDefault();
+    setBookingStep(4);
+  };
+
+  const handlePayment = (e) => {
+    e.preventDefault();
+    // Simulate payment processing
+    setTimeout(() => {
+      setBookingStep(5);
+    }, 1500);
+  };
+
+  const resetBooking = () => {
+    setBookingStep(1);
+    setSelectedOption(null);
+    setPassengerDetails({
+      firstName: '',
+      lastName: '',
+      email: user?.email || '',
+      phone: '',
+      passport: ''
+    });
+    setPaymentMethod('credit');
+    setSearchResults([]);
+  };
+
+  const renderBookingStep = () => {
+    switch (bookingStep) {
+      case 1:
+        return (
+          <div className="booking-section">
+            <h2 className="text-heading-lg">Arrange New Journey</h2>
+            <form className="booking-search-form" onSubmit={handleSearch}>
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="origin" className="text-body-sm text-secondary">From</label>
+                  <input type="text" id="origin" placeholder="Departure city" className="input-field" required />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="destination" className="text-body-sm text-secondary">To</label>
+                  <input type="text" id="destination" placeholder="Destination city" className="input-field" required />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="dates" className="text-body-sm text-secondary">Travel Dates</label>
+                  <input type="date" id="dates" className="input-field" required />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="passengers" className="text-body-sm text-secondary">Passengers</label>
+                  <select id="passengers" className="input-field">
+                    <option>1 Passenger</option>
+                    <option>2 Passengers</option>
+                    <option>3 Passengers</option>
+                    <option>4+ Passengers</option>
+                  </select>
+                </div>
+              </div>
+              
+              <button type="submit" className="btn btn-accent">Search Elite Options</button>
+            </form>
+          </div>
+        );
+      
+      case 2:
+        return (
+          <div className="booking-section">
+            <h2 className="text-heading-lg">Select Your Journey</h2>
+            <div className="results-grid">
+              {searchResults.map(item => (
+                <div key={item.id} className="inventory-item card">
+                  <div className="item-header">
+                    <h3 className="text-heading-sm">{item.route}</h3>
+                    <p className="text-body-md text-secondary">{item.date}</p>
+                  </div>
+                  <div className="item-options">
+                    {item.options.map(option => (
+                      <div key={option.id} className="option-card">
+                        <div className="option-header">
+                          <span className="source-tag">{option.source}</span>
+                          <span className="price-tag">{option.price}</span>
+                        </div>
+                        <div className="option-details">
+                          <p className="text-body-md">{option.airline}</p>
+                          <p className="text-body-sm text-secondary">{option.class}</p>
+                          <p className="text-body-sm text-secondary">{option.time}</p>
+                          <div className="rating">
+                            {'★'.repeat(option.rating)}
+                            {'☆'.repeat(5 - option.rating)}
+                          </div>
+                        </div>
+                        <button 
+                          className="btn btn-accent btn-small"
+                          onClick={() => handleSelectOption(option)}
+                        >
+                          Select Journey
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button className="btn btn-secondary" onClick={() => setBookingStep(1)}>
+              Back to Search
+            </button>
+          </div>
+        );
+      
+      case 3:
+        return (
+          <div className="booking-section">
+            <h2 className="text-heading-lg">Passenger Details</h2>
+            <div className="travel-details">
+              <div className="detail-card">
+                <div className="detail-header">
+                  <h3 className="text-heading-sm">Journey Details</h3>
+                </div>
+                <div className="detail-content">
+                  <p className="text-body-md">Delhi → Mumbai</p>
+                  <p className="text-body-md">10 Sep 2025</p>
+                  <p className="text-body-md">{selectedOption?.airline} - {selectedOption?.class}</p>
+                  <p className="text-body-md">{selectedOption?.time}</p>
+                  <p className="text-body-md text-accent">{selectedOption?.price}</p>
+                </div>
+              </div>
+            </div>
+            
+            <form onSubmit={handleContinueToPayment}>
+              <div className="passenger-form">
+                <div className="form-group">
+                  <label htmlFor="firstName" className="text-body-sm text-secondary">First Name</label>
+                  <input 
+                    type="text" 
+                    id="firstName" 
+                    name="firstName" 
+                    className="input-field" 
+                    value={passengerDetails.firstName}
+                    onChange={handlePassengerChange}
+                    required 
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="lastName" className="text-body-sm text-secondary">Last Name</label>
+                  <input 
+                    type="text" 
+                    id="lastName" 
+                    name="lastName" 
+                    className="input-field" 
+                    value={passengerDetails.lastName}
+                    onChange={handlePassengerChange}
+                    required 
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="email" className="text-body-sm text-secondary">Email</label>
+                  <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    className="input-field" 
+                    value={passengerDetails.email}
+                    onChange={handlePassengerChange}
+                    required 
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="phone" className="text-body-sm text-secondary">Phone</label>
+                  <input 
+                    type="tel" 
+                    id="phone" 
+                    name="phone" 
+                    className="input-field" 
+                    value={passengerDetails.phone}
+                    onChange={handlePassengerChange}
+                    required 
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="passport" className="text-body-sm text-secondary">Passport Number</label>
+                  <input 
+                    type="text" 
+                    id="passport" 
+                    name="passport" 
+                    className="input-field" 
+                    value={passengerDetails.passport}
+                    onChange={handlePassengerChange}
+                    required 
+                  />
+                </div>
+              </div>
+              
+              <div className="form-actions">
+                <button type="button" className="btn btn-secondary" onClick={() => setBookingStep(2)}>
+                  Back
+                </button>
+                <button type="submit" className="btn btn-accent">
+                  Continue to Payment
+                </button>
+              </div>
+            </form>
+          </div>
+        );
+      
+      case 4:
+        return (
+          <div className="booking-section">
+            <h2 className="text-heading-lg">Payment Details</h2>
+            
+            <div className="payment-methods">
+              <div 
+                className={`payment-method ${paymentMethod === 'credit' ? 'selected' : ''}`}
+                onClick={() => setPaymentMethod('credit')}
+              >
+                <div className="payment-method-icon">💳</div>
+                <div className="text-body-md">Credit Card</div>
+              </div>
+              
+              <div 
+                className={`payment-method ${paymentMethod === 'debit' ? 'selected' : ''}`}
+                onClick={() => setPaymentMethod('debit')}
+              >
+                <div className="payment-method-icon">💳</div>
+                <div className="text-body-md">Debit Card</div>
+              </div>
+              
+              <div 
+                className={`payment-method ${paymentMethod === 'upi' ? 'selected' : ''}`}
+                onClick={() => setPaymentMethod('upi')}
+              >
+                <div className="payment-method-icon">📱</div>
+                <div className="text-body-md">UPI</div>
+              </div>
+              
+              <div 
+                className={`payment-method ${paymentMethod === 'netbanking' ? 'selected' : ''}`}
+                onClick={() => setPaymentMethod('netbanking')}
+              >
+                <div className="payment-method-icon">🏦</div>
+                <div className="text-body-md">Net Banking</div>
+              </div>
+            </div>
+            
+            <div className="billing-details">
+              <h3 className="text-heading-md">Billing Summary</h3>
+              <div className="billing-row">
+                <span>Base Fare</span>
+                <span>₹40,000</span>
+              </div>
+              <div className="billing-row">
+                <span>Taxes & Fees</span>
+                <span>₹5,000</span>
+              </div>
+              <div className="billing-row">
+                <span>Service Fee</span>
+                <span>₹1,500</span>
+              </div>
+              <div className="billing-row total">
+                <span>Total</span>
+                <span>₹46,500</span>
+              </div>
+            </div>
+            
+            <form onSubmit={handlePayment}>
+              <div className="passenger-form">
+                {paymentMethod !== 'upi' && paymentMethod !== 'netbanking' && (
+                  <>
+                    <div className="form-group">
+                      <label htmlFor="cardNumber" className="text-body-sm text-secondary">Card Number</label>
+                      <input type="text" id="cardNumber" className="input-field" placeholder="1234 5678 9012 3456" required />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label htmlFor="expiry" className="text-body-sm text-secondary">Expiry Date</label>
+                      <input type="text" id="expiry" className="input-field" placeholder="MM/YY" required />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label htmlFor="cvv" className="text-body-sm text-secondary">CVV</label>
+                      <input type="text" id="cvv" className="input-field" placeholder="123" required />
+                    </div>
+                  </>
+                )}
+                
+                {paymentMethod === 'upi' && (
+                  <div className="form-group">
+                    <label htmlFor="upiId" className="text-body-sm text-secondary">UPI ID</label>
+                    <input type="text" id="upiId" className="input-field" placeholder="yourname@upi" required />
+                  </div>
+                )}
+                
+                {paymentMethod === 'netbanking' && (
+                  <div className="form-group">
+                    <label htmlFor="bank" className="text-body-sm text-secondary">Select Bank</label>
+                    <select id="bank" className="input-field">
+                      <option>State Bank of India</option>
+                      <option>HDFC Bank</option>
+                      <option>ICICI Bank</option>
+                      <option>Axis Bank</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+              
+              <div className="form-actions">
+                <button type="button" className="btn btn-secondary" onClick={() => setBookingStep(3)}>
+                  Back
+                </button>
+                <button type="submit" className="btn btn-accent">
+                  Pay ₹46,500
+                </button>
+              </div>
+            </form>
+          </div>
+        );
+      
+      case 5:
+        return (
+          <div className="confirmation-section">
+            <div className="confirmation-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 6L9 17L4 12" stroke="var(--elite-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <h2 className="text-heading-xl">Booking Confirmed!</h2>
+            <p className="text-body-lg text-secondary">Your journey has been successfully booked.</p>
+            
+            <div className="confirmation-details card">
+              <h3 className="text-heading-md">Booking Details</h3>
+              <div className="confirmation-item">
+                <span>Booking Reference</span>
+                <span className="text-accent">TP-789456</span>
+              </div>
+              <div className="confirmation-item">
+                <span>Journey</span>
+                <span>Delhi → Mumbai</span>
+              </div>
+              <div className="confirmation-item">
+                <span>Date</span>
+                <span>10 Sep 2025</span>
+              </div>
+              <div className="confirmation-item">
+                <span>Airline</span>
+                <span>{selectedOption?.airline}</span>
+              </div>
+              <div className="confirmation-item">
+                <span>Class</span>
+                <span>{selectedOption?.class}</span>
+              </div>
+              <div className="confirmation-item">
+                <span>Passenger</span>
+                <span>{passengerDetails.firstName} {passengerDetails.lastName}</span>
+              </div>
+              <div className="confirmation-item">
+                <span>Total Paid</span>
+                <span className="text-accent">₹46,500</span>
+              </div>
+            </div>
+            
+            <div className="confirmation-actions">
+              <button className="btn btn-secondary" onClick={resetBooking}>
+                Book Another Journey
+              </button>
+              <button className="btn btn-accent">
+                Download E-Ticket
+              </button>
+            </div>
+          </div>
+        );
+      
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="bookings">
       <div className="section-header">
@@ -184,74 +652,23 @@ function Bookings() {
         <p className="text-body-md text-secondary">Premium travel arrangements for your executive team</p>
       </div>
       
-      <div className="booking-form card">
-        <h3 className="text-heading-md">Arrange New Journey</h3>
-        <form className="booking-search-form">
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="tripType" className="text-body-sm text-secondary">Journey Type</label>
-              <select id="tripType" className="input-field">
-                <option>First Class Flight</option>
-                <option>Business Class Flight</option>
-                <option>Luxury Train</option>
-                <option>Premium Hotel</option>
-              </select>
+      <div className="booking-steps">
+        {[1, 2, 3, 4, 5].map(step => (
+          <div 
+            key={step} 
+            className={`step ${bookingStep === step ? 'active' : bookingStep > step ? 'completed' : ''}`}
+          >
+            <div className="step-indicator">
+              {step}
             </div>
-            
-            <div className="form-group">
-              <label htmlFor="destination" className="text-body-sm text-secondary">Destination</label>
-              <input type="text" id="destination" placeholder="Enter destination" className="input-field" />
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="dates" className="text-body-sm text-secondary">Travel Dates</label>
-              <input type="date" id="dates" className="input-field" />
+            <div className="step-label">
+              {['Search', 'Select', 'Passenger', 'Payment', 'Confirmation'][step - 1]}
             </div>
           </div>
-          
-          <button type="submit" className="btn btn-accent">Search Elite Options</button>
-        </form>
+        ))}
       </div>
       
-      <div className="booking-results">
-        <h3 className="text-heading-md">Premium Travel Options</h3>
-        <div className="results-grid">
-          <div className="booking-option card">
-            <div className="option-header">
-              <h4 className="text-heading-sm">First Class to Mumbai</h4>
-              <span className="price-tag">₹45,000</span>
-            </div>
-            <div className="option-details">
-              <p className="text-body-md">New Delhi (DEL) to Mumbai (BOM)</p>
-              <p className="text-body-sm text-secondary">Departure: 08:00 AM | Arrival: 11:30 AM</p>
-              <p className="text-body-sm text-secondary">Air India AI-201 | First Class</p>
-              <div className="option-amenities">
-                <span className="amenity-tag">Champagne Service</span>
-                <span className="amenity-tag">Priority Boarding</span>
-                <span className="amenity-tag">Lounge Access</span>
-              </div>
-            </div>
-            <button className="btn btn-secondary">Reserve Journey</button>
-          </div>
-          
-          <div className="booking-option card">
-            <div className="option-header">
-              <h4 className="text-heading-sm">Business Class to Mumbai</h4>
-              <span className="price-tag">₹38,000</span>
-            </div>
-            <div className="option-details">
-              <p className="text-body-md">New Delhi (DEL) to Mumbai (BOM)</p>
-              <p className="text-body-sm text-secondary">Departure: 02:00 PM | Arrival: 05:30 PM</p>
-              <p className="text-body-sm text-secondary">Vistara UK-945 | Business Class</p>
-              <div className="option-amenities">
-                <span className="amenity-tag">Meal Selection</span>
-                <span className="amenity-tag">Priority Check-in</span>
-              </div>
-            </div>
-            <button className="btn btn-secondary">Reserve Journey</button>
-          </div>
-        </div>
-      </div>
+      {renderBookingStep()}
     </div>
   );
 }
